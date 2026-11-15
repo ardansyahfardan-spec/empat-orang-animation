@@ -8,6 +8,9 @@ on:
       - '.github/workflows/render.yml'
 permissions:
   contents: read
+concurrency:
+  group: empat-orang-mp4-render
+  cancel-in-progress: true
 jobs:
   render:
     runs-on: ubuntu-latest
