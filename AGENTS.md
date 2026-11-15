@@ -19,6 +19,6 @@ Before production work, read the HyperFrames foundation skill and the relevant s
 - `.agents/skills/cinematography-lighting/SKILL.md`
 - `.agents/skills/horror-sound-design/SKILL.md`
 - `.agents/skills/indonesian-narrator-tts/SKILL.md`
-- `.agents/skills/animation-render-qc/SKILL.md`
+- `.agents/skills/animation-render-qa/SKILL.md`
 
 Apply these as production requirements, not merely reference material. Keep TTSMaker as the preferred narrator provider, but only claim its use when its actual exported audio is integrated. Complete a storyboard-to-shot implementation audit before rendering, then perform the full render/QC workflow.
