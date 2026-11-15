@@ -1,48 +1,50 @@
-name: Render episode MP4
+name: Render EMPAT ORANG — HyperFrames
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'index.html'
-      - 'render/**'
+      - 'hyperframes-project/**'
       - '.github/workflows/render.yml'
+      - 'AGENTS.md'
+      - '.agents/skills/hyperframes/**'
 permissions:
   contents: read
 concurrency:
-  group: empat-orang-mp4-render
+  group: empat-orang-hyperframes-render
   cancel-in-progress: true
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Install rendering and audio tools
+          node-version: 22
+      - name: Install free rendering and audio tools
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng
-          npm install playwright
-          npx playwright install --with-deps chromium
-      - name: Capture 3D animation through Chromium screencast
+          npx --yes hyperframes --version
+      - name: Prepare temporary audio tracks
         run: |
-          node render/render.mjs
-          echo "Captured frames: $(find output -name 'frame-*.jpg' | wc -l)"
-      - name: Create Indonesian narration
+          mkdir -p hyperframes-project/assets output
+          # Temporary narration fallback only. Replace with a real TTSMaker MP3 when supplied.
+          espeak-ng -v id+m3 -s 148 -p 27 -a 175 -w hyperframes-project/assets/narration.wav "Malam itu, Tio, Bila, Yhola, dan Ardan melewati sebuah rumah tua di ujung jalan. Tidak ada lampu. Tidak ada suara. Lalu, seseorang memanggil dari balik pagar. Ardan. Suara itu terdengar seperti seseorang yang sangat mengenalnya. Jangan dijawab, bisik Bila. Dari lantai dua, sebuah bayangan bergerak. Padahal rumah itu sudah lama kosong. Pintu depan terbuka perlahan. Tidak ada seorang pun di sana. Lalu terdengar bisikan. Akhirnya, kalian pulang."
+          ffmpeg -y -f lavfi -i "sine=frequency=55:sample_rate=48000:duration=92" -f lavfi -i "sine=frequency=82.41:sample_rate=48000:duration=92" -f lavfi -i "anoisesrc=color=pink:amplitude=0.02:sample_rate=48000:duration=92" -filter_complex "[0:a]volume=0.12,tremolo=f=0.10:d=0.7[a0];[1:a]volume=0.06,tremolo=f=0.16:d=0.65[a1];[2:a]highpass=f=900,lowpass=f=4200,volume=0.08[a2];[a0][a1][a2]amix=inputs=3:duration=longest:normalize=0,afade=t=in:st=0:d=4,afade=t=out:st=88:d=4[m]" -map "[m]" -t 92 -c:a pcm_s16le hyperframes-project/assets/music.wav
+          ffmpeg -y -f lavfi -i "anoisesrc=color=pink:amplitude=0.025:sample_rate=48000:duration=92" -af "highpass=f=120,lowpass=f=900,volume=0.22,afade=t=in:st=0:d=3,afade=t=out:st=89:d=3" -c:a pcm_s16le hyperframes-project/assets/ambience.wav
+      - name: Validate HyperFrames composition
+        run: npx --yes hyperframes lint ./hyperframes-project --json
+      - name: Render MP4 with HyperFrames
+        run: npx --yes hyperframes render -o ../output/empat-orang-ep01.mp4
+        working-directory: hyperframes-project
+      - name: Verify MP4
         run: |
-          espeak-ng -v id+m3 -s 148 -p 27 -a 175 -w output/narration.wav "Malam itu, Tio, Bila, Yhola, dan Ardan melewati sebuah rumah tua di ujung jalan. Tidak ada lampu. Tidak ada suara. Lalu, seseorang memanggil dari balik pagar. Ardan. Suara itu terdengar seperti seseorang yang sangat mengenalnya. Jangan dijawab, bisik Bila. Dari lantai dua, sebuah bayangan bergerak. Padahal rumah itu sudah lama kosong. Pintu depan terbuka perlahan. Tidak ada seorang pun di sana. Lalu terdengar bisikan. Akhirnya, kalian pulang."
-      - name: Compose original horror music bed
-        run: |
-          ffmpeg -y             -f lavfi -i "sine=frequency=55:sample_rate=48000:duration=92"             -f lavfi -i "sine=frequency=82.41:sample_rate=48000:duration=92"             -f lavfi -i "anoisesrc=color=pink:amplitude=0.025:sample_rate=48000:duration=92"             -filter_complex "[0:a]volume=0.15,tremolo=f=0.11:d=0.8[a0];[1:a]volume=0.08,tremolo=f=0.17:d=0.7[a1];[2:a]highpass=f=900,lowpass=f=4200,volume=0.13[a2];[a0][a1][a2]amix=inputs=3:duration=longest:normalize=0,afade=t=in:st=0:d=4,afade=t=out:st=88:d=4[m]"             -map "[m]" -t 92 -c:a pcm_s16le output/music.wav
-      - name: Encode MP4 with narration, music and horror ambience
-        run: |
-          ffmpeg -y             -framerate 30 -start_number 0 -i output/frame-%05d.jpg             -i output/narration.wav -i output/music.wav             -f lavfi -i "sine=frequency=42:sample_rate=48000:duration=92"             -filter_complex "[0:v]fps=30,tpad=stop_mode=clone:stop_duration=92,trim=duration=92,setsar=1[v];[1:a]adelay=1000|1000,volume=1.25[voice];[2:a]volume=0.75[music];[3:a]volume=0.12,lowpass=f=85[rumble];[voice][music][rumble]amix=inputs=3:duration=longest:normalize=0,alimiter=limit=0.94,afade=t=out:st=89:d=3[a]"             -map "[v]" -map "[a]" -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p             -c:a aac -b:a 192k -t 92 -r 30 -movflags +faststart output/empat-orang-ep01.mp4
-          ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate,codec_name -of json output/empat-orang-ep01.mp4
+          test -s output/empat-orang-ep01.mp4
+          ffprobe -v error -show_entries format=duration:stream=width,height,codec_name,r_frame_rate -of json output/empat-orang-ep01.mp4
       - name: Upload MP4
         uses: actions/upload-artifact@v4
         with:
-          name: empat-orang-episode-01-mp4
+          name: empat-orang-episode-01-hyperframes
           path: output/empat-orang-ep01.mp4
           retention-days: 30
