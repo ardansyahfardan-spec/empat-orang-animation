@@ -11,23 +11,34 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install rendering tools
+      - name: Install rendering and audio tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
           npm install playwright
           npx playwright install --with-deps chromium
-      - name: Render frames and encode MP4
+      - name: Render 1080x1920 animation frames
         run: |
           mkdir -p output
           node render/render.mjs
-          ffmpeg -y -framerate 30 -i output/frame-%05d.png -c:v libx264 -pix_fmt yuv420p -r 30 -movflags +faststart output/empat-orang-ep01.mp4
+      - name: Create Indonesian narration and atmospheric sound
+        run: |
+          espeak-ng -v id+m3 -s 132 -p 28 -a 170 -w output/narration.wav "Malam itu, Tio, Bila, Yhola, dan Ardan melewati sebuah rumah tua di ujung jalan. Tidak ada lampu. Tidak ada suara. Lalu, seseorang memanggil dari balik pagar. Ardan. Suara itu terdengar seperti seseorang yang sangat mengenalnya. Jangan dijawab, bisik Bila. Dari lantai dua, sebuah bayangan bergerak. Padahal rumah itu sudah lama kosong. Pintu depan terbuka perlahan. Tidak ada seorang pun di sana. Lalu terdengar bisikan. Akhirnya, kalian pulang."
+      - name: Encode MP4 with narration and horror ambience
+        run: |
+          ffmpeg -y -framerate 30 -i output/frame-%05d.png -i output/narration.wav \
+            -f lavfi -i "sine=frequency=48:sample_rate=48000:duration=92" \
+            -f lavfi -i "sine=frequency=73:sample_rate=48000:duration=92" \
+            -filter_complex "[2:a]volume=0.035,lowpass=f=110[a1];[3:a]volume=0.018,lowpass=f=140[a2];[1:a]adelay=1800|1800,volume=1.2[voice];[a1][a2][voice]amix=inputs=3:duration=longest:normalize=0,afade=t=out:st=89:d=3[a]" \
+            -map 0:v -map "[a]" -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p \
+            -c:a aac -b:a 192k -t 92 -r 30 -movflags +faststart output/empat-orang-ep01.mp4
+          ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate,codec_name -of json output/empat-orang-ep01.mp4
       - name: Upload MP4
         uses: actions/upload-artifact@v4
         with:
