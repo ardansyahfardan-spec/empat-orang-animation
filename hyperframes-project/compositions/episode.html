@@ -1,0 +1,98 @@
+<template>
+<style>
+#root{position:absolute;inset:0;overflow:hidden;background:#080d15;color:#f5eee5}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block}
+#shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,8,14,.12) 40%,rgba(3,5,9,.82) 100%);pointer-events:none}
+#caption{position:absolute;left:7%;right:7%;bottom:13%;min-height:150px;text-align:center;color:#f4eee5;font:500 34px/1.32 Georgia,serif;text-shadow:0 3px 14px #000;letter-spacing:.01em}
+#caption small{display:block;margin-top:14px;font:600 24px/1.3 system-ui,sans-serif;letter-spacing:.04em;color:#e2d0b7}
+#mark{position:absolute;top:7%;left:7%;font:700 18px/1 system-ui,sans-serif;letter-spacing:.28em;color:#d5c0a2}
+</style>
+<div id="root" data-composition-id="episode" data-width="1080" data-height="1920">
+  <canvas id="world"></canvas><div id="shade"></div>
+  <div id="mark">EMPAT ORANG</div>
+  <div id="caption" class="clip" data-start="0" data-duration="92"><span id="line"></span><small id="subline"></small></div>
+</div>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+const canvas=document.querySelector("#world"),line=document.querySelector("#line"),sub=document.querySelector("#subline");
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+renderer.setPixelRatio(1);renderer.setSize(1080,1920,false);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x08111d);scene.fog=new THREE.FogExp2(0x101923,.027);
+const camera=new THREE.PerspectiveCamera(39,1080/1920,.1,180);
+scene.add(new THREE.HemisphereLight(0x8eaacb,0x17131b,1.2));
+const moon=new THREE.DirectionalLight(0x9bb9dc,2.4);moon.position.set(-9,17,8);scene.add(moon);
+const warm=new THREE.PointLight(0xffb56e,0,24);warm.position.set(0,5,-13);scene.add(warm);
+const mat=(c,r=.82,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const M={ground:mat(0x171c1d),road:mat(0x24282c),wall:mat(0x38343a),roof:mat(0x171b25),wood:mat(0x30252a),glass:mat(0x101c2a,.24,.22),metal:mat(0x4b5056,.5,.55),leaf:mat(0x15251d),skin:mat(0xb98270),black:mat(0x101319),white:mat(0xd9d1c6)};
+function add(g,m,x,y,z,p=scene){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);p.add(o);return o}
+function box(w,h,d,m,x,y,z,p=scene){return add(new THREE.BoxGeometry(w,h,d),m,x,y,z,p)}
+function ball(r,m,x,y,z,sx=1,sy=1,sz=1,p=scene){const o=add(new THREE.SphereGeometry(r,20,16),m,x,y,z,p);o.scale.set(sx,sy,sz);return o}
+function cyl(rt,rb,h,m,x,y,z,p=scene){return add(new THREE.CylinderGeometry(rt,rb,h,12),m,x,y,z,p)}
+// Village environment
+box(72,.35,100,M.ground,0,-.25,-20);box(7,.12,75,M.road,0,-.04,6);
+for(let i=0;i<13;i++){const x=-21+i*3.5,z=-18-(i%3)*5;const trunk=cyl(.17,.26,3.7,mat(0x28231f),x,1.55,z);trunk.rotation.z=(i%2?-.08:.08);ball(2.1,M.leaf,x,4,z,1,1.45,1)}
+// Abandoned house
+box(13,8,1.2,M.wall,0,4,-15);box(14,.5,1.6,M.roof,0,8.1,-15);const roof=add(new THREE.ConeGeometry(8.8,3.8,4),M.roof,0,9.8,-15);roof.rotation.y=Math.PI/4;roof.scale.set(1,.7,.8);
+for(const x of [-4,4]){box(2.1,2.6,.18,M.glass,x,4.6,-14.33);box(2.3,.12,.2,M.metal,x,4.6,-14.2);box(.12,2.6,.2,M.metal,x,4.6,-14.2);box(2.3,.12,.2,M.metal,x,3.3,-14.2)}
+const doorPivot=new THREE.Group();doorPivot.position.set(0,0,-14.25);scene.add(doorPivot);box(1.7,4,.2,M.wood,.85,2,0,doorPivot);ball(.07,M.metal,1.5,2,.15,1,1,1,doorPivot);
+const winLights=[];for(const x of [-4,4]){const l=new THREE.PointLight(0xffb56b,0,10);l.position.set(x,4.5,-13.4);scene.add(l);winLights.push(l)}
+for(let i=0;i<9;i++){const x=-13+i*3.2;cyl(.07,.07,1.5,M.metal,x,.75,-8);box(.1,.1,13,M.metal,x,.6,-1)}
+// Character rigs with staggered limb motion
+const chars=[];
+function character(id,x,z){
+ const root=new THREE.Group();scene.add(root);root.position.set(x,0,z);
+ const skin=mat(0xb98270),shirt=mat([0x414a59,0x5c4b49,0x424553,0x171a20][id]),pants=mat(0x242630),hair=mat(0x171719);
+ const torso=add(new THREE.CapsuleGeometry(.34,.75,5,10),shirt,0,1.36,0,root);torso.scale.set(1,.95,.66);
+ const head=new THREE.Group();head.position.set(0,2.25,0);root.add(head);ball(.34,skin,0,0,0,.88,1.08,.85,head);
+ if(id===1||id===2){const hijab=mat(id===1?0x29272e:0x514b52);ball(.385,hijab,0,.08,-.03,1.04,1.14,.92,head);ball(.31,skin,0,-.02,.25,.88,.94,.55,head);const drape=add(new THREE.CapsuleGeometry(.35,.62,5,10),hijab,0,-.48,-.02,head);drape.scale.set(1.12,1,.82)}
+ else{ball(.35,hair,0,.22,-.02,1.02,.58,.94,head);if(id===0){box(.12,.35,.18,hair,-.28,.02,.02,head);ball(.035,M.white,.32,-.05,.28,1,1,1,head)}}
+ for(const ex of [-.105,.105])ball(.026,M.black,ex,-.02,.285,1,1,.6,head);
+ const arms=[],legs=[];
+ for(const side of [-1,1]){const a=add(new THREE.CapsuleGeometry(.105,.62,4,8),shirt,side*.43,1.48,0,root);a.rotation.z=side*.16;arms.push(a);ball(.11,skin,side*.46,.99,.02,1,1,1,root);const l=add(new THREE.CapsuleGeometry(.14,.66,4,8),pants,side*.18,.48,0,root);legs.push(l);box(.18,.12,.34,M.black,side*.18,.08,.08,root)}
+ if(id===0)box(.3,.13,.02,M.white,0,1.48,.23,root);
+ root.scale.setScalar(id===1?.88:id===2?1.04:1);
+ chars.push({root,head,arms,legs,id,x,z});
+}
+character(0,-1.8,2.8);character(1,-.55,3.15);character(2,.75,3.1);character(3,2.1,2.85);
+const ghost=new THREE.Group();scene.add(ghost);ball(.34,mat(0xbfc3c2,.5),0,0,0,.7,1.25,.45,ghost);ball(.22,mat(0xd2d2cb),0,.48,0,1,.9,.8,ghost);for(const x of [-.09,.09])ball(.035,M.black,x,.5,.17,1,1,.5,ghost);ghost.position.set(4,4.5,-13.5);
+const shots=[
+[0,4,"EMPAT ORANG","RUMAH YANG MEMANGGIL","hook"],[4,9,"Malam itu, jalan desa sudah sepi.","Hanya suara jangkrik menemani.","village"],[9,13,"Mereka berempat berjalan pulang.","","walk"],[13,17,"Tio berhenti.","“Eh. Kalian dengar?”","tio"],[17,21,"Bila menoleh ke arah rumah.","“Dengar apa?”","bila"],[21,25,"Sebuah suara terdengar dari balik pagar.","“Ardan...”","gate"],[25,29,"Ardan menatap rumah itu.","“Itu suara siapa?”","ardan"],[29,33,"Yhola melihat jendela lantai dua.","Tirai itu bergerak sendiri.","yhola"],[33,37,"Di balik kaca... ada seseorang.","","window"],[37,41,"Sosok itu menghilang.","Secepat kedipan mata.","empty"],[41,45,"“Jangan dijawab, Dan.”","Bila mencengkeram lengannya.","two"],[45,49,"Tiba-tiba lampu rumah menyala.","","light"],[49,53,"Pintu depan terbuka perlahan.","Kreeeek...","door"],[53,57,"Mereka mundur beberapa langkah.","","fear"],[57,61,"Terdengar langkah dari lantai atas.","Duk... duk... duk...","stairs"],[61,65,"Tio mengangkat senter.","“Ada orang di dalam?”","flash"],[65,69,"Sorot lampu menangkap bayangan.","","reveal"],[69,73,"Bayangan itu berdiri di ujung lorong.","","hall"],[73,77,"Ardan mundur.","Pagar berderit di belakangnya.","retreat"],[77,81,"Pintu rumah membanting keras!","","slam"],[81,86,"Gelap. Hanya suara napas mereka.","","dark"],[86,92,"“Akhirnya... kalian pulang.”","BERSAMBUNG","end"]];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),ease=v=>{v=clamp(v,0,1);return v*v*(3-2*v)};
+function cameraAt(p,t,f=40){camera.position.set(...p);camera.fov=f;camera.updateProjectionMatrix();camera.lookAt(...t)}
+function renderAt(t){
+ const s=shots.find(q=>t>=q[0]&&t<q[1])||shots.at(-1),local=clamp((t-s[0])/(s[1]-s[0]),0,1),kind=s[4];
+ line.textContent=s[2];sub.textContent=s[3];
+ const visible=["walk","tio","bila","ardan","yhola","two","fear","flash","retreat","end"].includes(kind);
+ chars.forEach((c,i)=>{c.root.visible=visible;const moving=kind==="walk"||kind==="fear"||kind==="retreat";const phase=t*7+i*1.4;c.root.position.set(c.x+(moving?Math.sin(t*.55)*.18:0),moving?Math.abs(Math.sin(phase))*.04:0,c.z+(kind==="walk"?local*1.3:0));c.legs.forEach((l,j)=>l.rotation.x=moving?Math.sin(phase+j*Math.PI)*.42:0);c.arms.forEach((a,j)=>a.rotation.x=moving?Math.sin(phase+j*Math.PI+Math.PI)*.32:0);c.head.rotation.y=["tio","bila","ardan","yhola"].includes(kind)?Math.sin(local*Math.PI)*.16:0});
+ ghost.visible=["window","reveal","hall","end"].includes(kind);ghost.position.y=4.5+(kind==="reveal"?Math.sin(t*4)*.07:0);
+ const lit=["light","door","slam","end"].includes(kind);warm.intensity=lit?20:0;winLights.forEach(l=>l.intensity=lit?15:0);
+ doorPivot.rotation.y=kind==="door"?-ease(local)*1.15:0;
+ if(kind==="hook")cameraAt([0,3.3,8],[0,2,-2],33);
+ else if(kind==="village")cameraAt([13,9,17],[0,3,-9],39);
+ else if(kind==="walk"||kind==="fear")cameraAt([0,4,13],[0,1.8,-2],43);
+ else if(kind==="tio")cameraAt([-1.8,3.2,7],[-1.8,2,-5],33);
+ else if(kind==="bila")cameraAt([-.55,3.1,7],[-.55,1.9,-5],33);
+ else if(kind==="yhola")cameraAt([.75,3.4,7],[.75,2,-5],33);
+ else if(kind==="ardan")cameraAt([2.1,3.2,7],[2.1,2,-5],33);
+ else if(kind==="gate")cameraAt([7,2.5,8],[0,2,-13],37);
+ else if(kind==="window"||kind==="empty")cameraAt([4,5.5,-7],[4,4.5,-14],24);
+ else if(kind==="two")cameraAt([1.2,3.5,8],[.5,1.8,2],38);
+ else if(kind==="light"||kind==="door")cameraAt([0,5,8],[0,4,-15],37);
+ else if(kind==="stairs"||kind==="hall")cameraAt([0,4,-10],[0,4,-17],36);
+ else if(kind==="flash"||kind==="reveal")cameraAt([-2,3.2,7],[0,2,-13],35);
+ else if(kind==="retreat")cameraAt([4,3.5,12],[2,1.5,2],39);
+ else if(kind==="slam")cameraAt([0,3,-8],[0,2,-15],34);
+ else if(kind==="dark")cameraAt([0,2,8],[0,1,-10],44);
+ else cameraAt([0,4,10],[0,2,-13],39);
+ if(["walk","fear","retreat"].includes(kind))camera.position.x+=Math.sin(local*Math.PI)*.6;
+ if(["gate","window","door","end"].includes(kind))camera.position.z-=ease(local)*.8;
+ if(kind==="slam"){camera.position.x+=Math.sin(t*73)*.12;camera.position.y+=Math.cos(t*61)*.09}
+ scene.background.set(kind==="dark"?0x020306:0x08111d);
+ renderer.render(scene,camera);
+}
+window.addEventListener("hf-seek",e=>renderAt(e.detail.time));
+window.__hf=window.__hf||{};window.__hf.buildReady=window.__hf.buildReady||{};window.__hf.buildReady["episode"]=Promise.resolve();
+renderAt(0);
+const tl=gsap.timeline({paused:true});window.__timelines=window.__timelines||{};window.__timelines["episode"]=tl;
+</script>
+</template>
