@@ -17,14 +17,9 @@ try {
   await page.goto('file://' + process.cwd() + '/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => typeof window.renderFrame === 'function');
 
-  // Render the 540x960 scene at native 1080x1920 resolution without
-  // changing the authored scene coordinates.
-  await page.evaluate(() => {
-    const canvas = document.querySelector('canvas');
-    canvas.width = 1080;
-    canvas.height = 1920;
-    canvas.getContext('2d').scale(2, 2);
-  });
+  // Resize the WebGL renderer to the final portrait output resolution.
+  await page.waitForFunction(() => typeof window.setRenderResolution === 'function');
+  await page.evaluate(() => window.setRenderResolution(1080, 1920));
 
   await page.addStyleTag({
     content: `
