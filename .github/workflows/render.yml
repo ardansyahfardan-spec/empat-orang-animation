@@ -7,6 +7,7 @@ on:
       - '.github/workflows/render.yml'
       - 'AGENTS.md'
       - '.agents/skills/hyperframes/**'
+      - '.agents/skills/indonesian-narrator-tts/**'
 permissions:
   contents: read
 concurrency:
@@ -21,16 +22,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install free rendering and audio tools
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install free rendering and neural narration tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg espeak-ng
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install edge-tts
           npx --yes hyperframes --version
-      - name: Prepare temporary audio tracks
+      - name: Generate Indonesian neural narration
         run: |
           mkdir -p hyperframes-project/assets output
-          # Temporary narration fallback only. Replace with a real TTSMaker MP3 when supplied.
-          espeak-ng -v id+m3 -s 148 -p 27 -a 175 -w hyperframes-project/assets/narration.wav "Malam itu, Tio, Bila, Yhola, dan Ardan melewati sebuah rumah tua di ujung jalan. Tidak ada lampu. Tidak ada suara. Lalu, seseorang memanggil dari balik pagar. Ardan. Suara itu terdengar seperti seseorang yang sangat mengenalnya. Jangan dijawab, bisik Bila. Dari lantai dua, sebuah bayangan bergerak. Padahal rumah itu sudah lama kosong. Pintu depan terbuka perlahan. Tidak ada seorang pun di sana. Lalu terdengar bisikan. Akhirnya, kalian pulang."
+          edge-tts --voice id-ID-ArdiNeural --rate=-8% --pitch=-4Hz --volume=+0% --file hyperframes-project/assets/narration.txt --write-media hyperframes-project/assets/narration.mp3 --write-subtitles hyperframes-project/assets/narration.srt
+          test -s hyperframes-project/assets/narration.mp3
+          ffmpeg -y -i hyperframes-project/assets/narration.mp3 -af "loudnorm=I=-18:TP=-2:LRA=7" -ar 48000 -ac 2 -c:a pcm_s16le hyperframes-project/assets/narration.wav
+          test -s hyperframes-project/assets/narration.wav
+      - name: Prepare original horror music and ambience
+        run: |
           ffmpeg -y -f lavfi -i "sine=frequency=55:sample_rate=48000:duration=92" -f lavfi -i "sine=frequency=82.41:sample_rate=48000:duration=92" -f lavfi -i "anoisesrc=color=pink:amplitude=0.02:sample_rate=48000:duration=92" -filter_complex "[0:a]volume=0.12,tremolo=f=0.10:d=0.7[a0];[1:a]volume=0.06,tremolo=f=0.16:d=0.65[a1];[2:a]highpass=f=900,lowpass=f=4200,volume=0.08[a2];[a0][a1][a2]amix=inputs=3:duration=longest:normalize=0,afade=t=in:st=0:d=4,afade=t=out:st=88:d=4[m]" -map "[m]" -t 92 -c:a pcm_s16le hyperframes-project/assets/music.wav
           ffmpeg -y -f lavfi -i "anoisesrc=color=pink:amplitude=0.025:sample_rate=48000:duration=92" -af "highpass=f=120,lowpass=f=900,volume=0.22,afade=t=in:st=0:d=3,afade=t=out:st=89:d=3" -c:a pcm_s16le hyperframes-project/assets/ambience.wav
       - name: Validate HyperFrames composition
@@ -38,13 +48,17 @@ jobs:
       - name: Render MP4 with HyperFrames
         run: npx --yes hyperframes render -o ../output/empat-orang-ep01.mp4
         working-directory: hyperframes-project
-      - name: Verify MP4
+      - name: Verify MP4 and narration
         run: |
           test -s output/empat-orang-ep01.mp4
           ffprobe -v error -show_entries format=duration:stream=width,height,codec_name,r_frame_rate -of json output/empat-orang-ep01.mp4
-      - name: Upload MP4
+          ffprobe -v error -show_entries format=duration -of csv=p=0 hyperframes-project/assets/narration.wav
+      - name: Upload MP4 and narration QA files
         uses: actions/upload-artifact@v4
         with:
           name: empat-orang-episode-01-hyperframes
-          path: output/empat-orang-ep01.mp4
+          path: |
+            output/empat-orang-ep01.mp4
+            hyperframes-project/assets/narration.mp3
+            hyperframes-project/assets/narration.srt
           retention-days: 30
