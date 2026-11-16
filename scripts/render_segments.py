@@ -75,7 +75,7 @@ def patch_segment(segment_project: Path, start: int, end: int) -> None:
     )
     scene = scene.replace(
         'const canvas=document.querySelector("#world"),line=document.querySelector("#line"),sub=document.querySelector("#subline");',
-        'const SEGMENT_OFFSET=Number(document.querySelector("#root").dataset.segmentOffset||0);\nconst canvas=document.querySelector("#world"),line=document.querySelector("#line"),sub=document.querySelector("#subline");',
+        'const SEGMENT_OFFSET=Number(document.querySelector("[data-segment-offset]").dataset.segmentOffset||0);\nconst canvas=document.querySelector("#world"),line=document.querySelector("#line"),sub=document.querySelector("#subline");',
         1
     )
     scene = scene.replace(
