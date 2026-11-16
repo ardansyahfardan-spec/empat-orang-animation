@@ -1,138 +1,119 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080a10"><title>EMPAT ORANG — Rumah yang Memanggil · 3D</title>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EMPAT ORANG — EP01: Rumah yang Memanggil</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#080a10;color:#f3eee6;font-family:Georgia,serif}body{display:grid;place-items:center;overflow:hidden}.app{width:min(100vw,56.25vh);height:min(100dvh,177.78vw);display:flex;flex-direction:column;background:#10131a;position:relative}.stage{position:relative;flex:1;min-height:0;background:#080b12;overflow:hidden}canvas{display:block;width:100%;height:100%}.overlay{position:absolute;inset:0;display:flex;align-items:end;justify-content:center;padding:8% 7%;pointer-events:none;background:linear-gradient(transparent 43%,#05070bdc)}.caption{font-size:clamp(15px,3.7vw,23px);line-height:1.35;text-align:center;text-shadow:0 2px 8px #000;max-width:95%;min-height:3em}.hud{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#11151d;font:12px system-ui;color:#c9c3b9;gap:8px}.controls{display:flex;gap:8px}.controls button{border:1px solid #55515a;border-radius:30px;padding:9px 14px;background:#202530;color:#f3eee6;font-weight:600}.pill{font:10px system-ui;letter-spacing:.22em;color:#d2b995;text-transform:uppercase}.note{font:10px system-ui;opacity:.65;text-align:center;padding:0 8px}
-</style></head><body><main class="app"><section class="stage"><canvas id="screen"></canvas><div class="overlay"><div class="caption" id="caption"></div></div></section><footer class="hud"><div><div class="pill">EMPAT ORANG · 3D</div><div id="clock">00:00 / 01:32</div></div><div class="controls"><button id="play">▶ Putar</button><button id="restart">↺ Ulang</button></div></footer><div class="note">Episode 01 · Rumah yang Memanggil · 3D realtime</div></main>
+:root{color-scheme:dark;--cream:#d8c4a5}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#090b10;color:#f4eee5;font-family:system-ui,sans-serif}body{display:flex;flex-direction:column;align-items:center}.top{width:min(100%,760px);padding:14px 16px;display:flex;justify-content:space-between;align-items:center}.brand{font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--cream)}.ep{font-size:11px;color:#aaa39a}#stage{position:relative;width:min(100vw,56.25vh,540px);aspect-ratio:9/16;overflow:hidden;background:#070c13;box-shadow:0 14px 50px #0009}canvas{width:100%;height:100%;display:block}#vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#05080c22 0%,transparent 42%,#020408bb 100%)}#caption{position:absolute;left:7%;right:7%;bottom:9%;min-height:3em;text-align:center;font:500 clamp(19px,4.2vw,30px)/1.28 Georgia,serif;text-shadow:0 3px 16px #000;pointer-events:none}#caption small{display:block;margin-top:10px;color:var(--cream);font:600 .72em/1.3 system-ui,sans-serif}#controls{width:min(100%,760px);padding:14px 16px 22px;display:grid;gap:10px}#seek{width:100%;accent-color:var(--cream)}.buttons{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}button,select{border:1px solid #4a443c;background:#171a20;color:#f5eee5;border-radius:999px;padding:10px 15px;font-weight:650}button.primary{background:var(--cream);color:#17130f;border-color:var(--cream)}#time,.note{text-align:center;color:#a9a198;font-size:11px;font-variant-numeric:tabular-nums}.note{font-size:10px;line-height:1.5}audio{display:none}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand">EMPAT ORANG</div><div class="ep">EPISODE 01 · RUMAH YANG MEMANGGIL</div></header>
+<main id="stage"><canvas id="world"></canvas><div id="vignette"></div><div id="caption"></div></main>
+<section id="controls">
+<input id="seek" type="range" min="0" max="60" step=".02" value="0" aria-label="Posisi episode">
+<div class="buttons"><button id="play" class="primary">▶ Putar</button><button id="restart">↺ Ulang</button><button id="full">⛶ Layar penuh</button><select id="speed" aria-label="Kecepatan"><option value="1">1×</option><option value=".75">0,75×</option><option value=".5">0,5×</option></select></div>
+<div id="time">00:00 / --:--</div>
+<div class="note">Audio asli ElevenLabs menjadi pengendali waktu. Visual menyesuaikan durasi audio secara otomatis. Untuk menyimpan video, gunakan perekam layar saat episode diputar.</div>
+</section>
+<audio id="audio" preload="metadata" src="hyperframes-project/assets/audio/elevenlabs/EP01-VOICE-FINAL.mp3"></audio>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-const W=540,H=960,D=92,canvas=document.querySelector('#screen'),cap=document.querySelector('#caption'),clock=document.querySelector('#clock'),play=document.querySelector('#play');
+const canvas=document.querySelector('#world'),audio=document.querySelector('#audio'),caption=document.querySelector('#caption'),seek=document.querySelector('#seek'),timeLabel=document.querySelector('#time'),playBtn=document.querySelector('#play');
+const DESIGN_DURATION=60;
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,preserveDrawingBuffer:true});
-renderer.setPixelRatio(1);renderer.setSize(1080,1920,false);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x090f19);scene.fog=new THREE.FogExp2(0x101923,.035);
-const camera=new THREE.PerspectiveCamera(42,1080/1920,.1,180);
-scene.add(new THREE.HemisphereLight(0x8dabc9,0x17131b,1.1));
-const moonLight=new THREE.DirectionalLight(0x9bb9d8,2.1);moonLight.position.set(-8,15,7);scene.add(moonLight);
-const fill=new THREE.PointLight(0x9aa9c4,24,35);fill.position.set(5,5,-9);scene.add(fill);
-const mat=(color,rough=.85,metal=0)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
-const M={ground:mat(0x151a1b),road:mat(0x20242a),wall:mat(0x39343a),roof:mat(0x171b25),wood:mat(0x30252a),glass: new THREE.MeshStandardMaterial({color:0x101b29,roughness:.25,metalness:.25}),lit:new THREE.MeshStandardMaterial({color:0xffc77d,emissive:0xffa43a,emissiveIntensity:1.8}),skin:mat(0xb98570),black:mat(0x111319),white:mat(0xd8d0c3),leaf:mat(0x17251e),steel:mat(0x41454a,.55,.55)};
-function mesh(g,m,x=0,y=0,z=0,parent=scene){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o}
-function box(w,h,d,m,x,y,z,p=scene){return mesh(new THREE.BoxGeometry(w,h,d),m,x,y,z,p)}
-function sphere(r,m,x,y,z,sx=1,sy=1,sz=1,p=scene){const o=mesh(new THREE.SphereGeometry(r,18,14),m,x,y,z,p);o.scale.set(sx,sy,sz);return o}
-function cylinder(rt,rb,h,m,x,y,z,p=scene){return mesh(new THREE.CylinderGeometry(rt,rb,h,12),m,x,y,z,p)}
-// Environment: road, overgrown yard, old two-storey house
-box(70,.3,100,M.ground,0,-.22,-20);box(7,.12,70,M.road,0,-.03,5);
-for(let i=0;i<12;i++){const x=-19+i*3.5;const trunk=cylinder(.18,.28,3.4,mat(0x24221f),x,1.5,-16-(i%3)*5);trunk.rotation.z=(i%2?-.08:.09);sphere(2.2,M.leaf,x,4,-16-(i%3)*5,1,1.4,1)}
-// house facade at z=-15
-box(12,8,1,M.wall,0,4,-15);box(13,.45,1.5,M.roof,0,8.15,-15);const roof=mesh(new THREE.ConeGeometry(8.2,3.4,4),M.roof,0,9.7,-15);roof.rotation.y=Math.PI/4;roof.scale.set(1,.7,.8);
-box(1.5,4,.35,M.wood,0,2,-14.35);box(1.8,4,.2,M.black,0,2,-14.12);
-for(const wx of [-3.8,3.8]){box(2.2,2.5,.18,M.glass,wx,4.6,-14.35);box(2.35,.12,.22,M.steel,wx,4.6,-14.2);box(.12,2.6,.22,M.steel,wx,4.6,-14.2);box(2.35,.12,.22,M.steel,wx,3.35,-14.2)}
-box(2,.18,3,M.wood,0,.25,-13.5);
-for(let i=0;i<9;i++){const x=-13+i*3.2;const post=cylinder(.08,.08,1.5,M.steel,x,.75,-8);box(.12,.12,13,M.steel,x,.6,-1)}
-// Windows interior glow
-const windowLights=[];for(const wx of [-3.8,3.8]){const l=new THREE.PointLight(0xffb86b,0,9);l.position.set(wx,4.5,-13.3);scene.add(l);windowLights.push(l)}
-// Characters, stylized 3D proportions, consistent outfits
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(900,1600,false);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x08111b);scene.fog=new THREE.FogExp2(0x111a24,.026);
+const camera=new THREE.PerspectiveCamera(40,9/16,.1,180);
+scene.add(new THREE.HemisphereLight(0x9bb5d0,0x17131b,1.15));
+const moon=new THREE.DirectionalLight(0x9ab8dc,2.25);moon.position.set(-8,16,7);scene.add(moon);
+const fill=new THREE.PointLight(0xffb56d,0,26);fill.position.set(0,4,-13);scene.add(fill);
+const mat=(c,r=.82,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const M={earth:mat(0x171c1d),road:mat(0x272a2e),wall:mat(0x38343a),roof:mat(0x171b25),wood:mat(0x33272a),glass:mat(0x111d2a,.24,.2),steel:mat(0x4a5056,.52,.5),leaf:mat(0x17251d),black:mat(0x101319),skin:mat(0xb98570),cream:mat(0xd8d0c3)};
+function add(g,m,x=0,y=0,z=0,p=scene){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);p.add(o);return o}
+function box(w,h,d,m,x,y,z,p=scene){return add(new THREE.BoxGeometry(w,h,d),m,x,y,z,p)}
+function ball(r,m,x,y,z,sx=1,sy=1,sz=1,p=scene){const o=add(new THREE.SphereGeometry(r,18,14),m,x,y,z,p);o.scale.set(sx,sy,sz);return o}
+function cyl(rt,rb,h,m,x,y,z,p=scene){return add(new THREE.CylinderGeometry(rt,rb,h,12),m,x,y,z,p)}
+// Village ground, lane, trees and abandoned house
+box(76,.35,100,M.earth,0,-.25,-20);box(7,.12,76,M.road,0,-.04,5);
+for(let i=0;i<13;i++){let x=-22+i*3.7,z=-22-(i%3)*4;let trunk=cyl(.16,.24,3.5,mat(0x29231f),x,1.5,z);trunk.rotation.z=(i%2?-.08:.08);ball(2,M.leaf,x,4,z,1,1.45,1)}
+box(14,8,1.2,M.wall,0,4,-15);box(15,.5,1.8,M.roof,0,8.1,-15);const roof=add(new THREE.ConeGeometry(8.8,3.8,4),M.roof,0,9.8,-15);roof.rotation.y=Math.PI/4;roof.scale.set(1,.7,.8);
+const doorPivot=new THREE.Group();doorPivot.position.set(0,0,-14.25);scene.add(doorPivot);box(1.8,4,.2,M.wood,.9,2,0,doorPivot);ball(.07,M.steel,1.55,2,.13,1,1,1,doorPivot);
+const windows=[],curtains=[];for(const x of [-4,4]){box(2.2,2.6,.16,M.glass,x,4.6,-14.34);box(2.4,.12,.2,M.steel,x,4.6,-14.18);box(.12,2.7,.2,M.steel,x,4.6,-14.18);for(const side of [-1,1]){const c=box(.92,2.4,.08,mat(0x29232b),x+side*.56,4.6,-14.05);curtains.push({o:c,x:c.position.x,base:c.position.x})}const l=new THREE.PointLight(0xffb86b,0,9);l.position.set(x,4.6,-13.3);scene.add(l);windows.push(l)}
+// Iron fence and path
+for(let i=0;i<10;i++){let x=-14+i*3.1;cyl(.07,.07,1.5,M.steel,x,.75,-7);box(.1,.1,14,M.steel,x,.6,-.5)}
+// Four stylized character rigs; names and visual identities remain consistent
 const chars=[];
-function makeChar(id,x,z){
- const root=new THREE.Group();scene.add(root);root.position.set(x,0,z);
- const skin=mat(0xb9826b),dark=mat(id===0?0x292125:0x16191f),shirt=mat([0x3d4653,0x6b514b,0x414653,0x171a20][id]),pants=mat([0x20242c,0x29242a,0x252832,0x20232a][id]);
- const torso=mesh(new THREE.CapsuleGeometry(.34,.75,5,10),shirt,0,1.35,0,root);torso.scale.set(1,.95,.65);
- const head=new THREE.Group();head.position.set(0,2.25,0);root.add(head);
- sphere(.34,skin,0,0,0,.88,1.08,.85,head);
- if(id===1||id===2){
-   const hijab=mat(id===1?0x28272d:0x49434a);
-   sphere(.385,hijab,0,.08,-.035,1.04,1.14,.92,head);
-   sphere(.31,skin,0,-.015,.255,.88,.94,.55,head);
-   const drape=mesh(new THREE.CapsuleGeometry(.35,.62,5,10),hijab,0,-.48,-.02,head);drape.scale.set(1.12,1,.82);
- }else{
-   const hair=mat(id===0?0x211b1b:0x15171c);sphere(.35,hair,0,.22,-.02,1.02,.58,.94,head);
-   if(id===0){const side=mesh(new THREE.BoxGeometry(.12,.36,.2),hair,-.27,.02,.03,head);side.rotation.z=-.2;sphere(.035,M.white,.32,-.05,.28,1,1,1,head)}
- }
- // Eyes and facial detail
- for(const ex of [-.105,.105])sphere(.026,M.black,ex,-.02,.285,1,1,.6,head);
- const mouth=box(.10,.018,.02,mat(0x4b2928),0,-.17,.29,head);
- const arms=[];for(const side of [-1,1]){const arm=mesh(new THREE.CapsuleGeometry(.105,.62,4,8),shirt,side*.43,1.48,0,root);arm.rotation.z=side*.16;arms.push(arm);const hand=sphere(.11,skin,side*.46,.99,.02,1,1,1,root)}
- const legs=[];for(const side of [-1,1]){const leg=mesh(new THREE.CapsuleGeometry(.14,.66,4,8),pants,side*.18,.48,0,root);legs.push(leg);box(.18,.12,.34,M.black,side*.18,.08,.08,root)}
- // Tio's band tee print and earrings; Bila shorter; Yhola taller/slim; Ardan black tee
- if(id===0){box(.28,.12,.018,M.white,0,1.48,.23,root)}
- root.scale.setScalar(id===1?.88:id===2?1.04:1);
- const c={root,head,arms,legs,id,baseX:x,baseZ:z};chars.push(c);return c;
-}
-makeChar(0,-1.8,2.8);makeChar(1,-.55,3.15);makeChar(2,.75,3.1);makeChar(3,2.1,2.85);
-// ghost silhouette behind upper window
-const ghost=new THREE.Group();scene.add(ghost);sphere(.35,mat(0xc4c5bf,.5),0,0,0,.7,1.25,.45,ghost);sphere(.22,mat(0xd0d0c8),0,.48,0,1,.9,.8,ghost);for(const ex of [-.09,.09])sphere(.035,M.black,ex,.5,.17,1,1,.5,ghost);ghost.position.set(3.8,4.5,-13.6);ghost.visible=false;
-// props: porch light, gate, lantern
-const porch=new THREE.PointLight(0xffb56d,0,12);porch.position.set(0,5,-12);scene.add(porch);
-const moon=sphere(1.5,mat(0xc5d1d7,.9),8,13,-30,1,1,1);moon.material.emissive=new THREE.Color(0x27333c);moon.material.emissiveIntensity=.4;
+function makeCharacter(name,id,x,z,shirtColor,hairColor){const root=new THREE.Group();scene.add(root);root.position.set(x,0,z);const shirt=mat(shirtColor),pants=mat(0x252832),hair=mat(hairColor),skin=mat(0xb98570);
+ const torso=add(new THREE.CapsuleGeometry(.34,.76,5,10),shirt,0,1.38,0,root);torso.scale.set(1,.96,.68);
+ const head=new THREE.Group();head.position.set(0,2.3,0);root.add(head);ball(.34,skin,0,0,0,.9,1.08,.86,head);
+ ball(.35,hair,0,.22,-.025,1.03,.62,.92,head);if(id===0){ball(.12,hair,-.28,.02,.08,1,1.6,1,head)}
+ for(const ex of [-.105,.105])ball(.025,M.black,ex,-.02,.285,1,1,.5,head);
+ const arms=[],legs=[];for(const side of [-1,1]){const a=add(new THREE.CapsuleGeometry(.105,.62,4,8),shirt,side*.43,1.48,0,root);a.rotation.z=side*.16;arms.push(a);ball(.105,skin,side*.45,1,.02,1,1,1,root);const l=add(new THREE.CapsuleGeometry(.14,.67,4,8),pants,side*.18,.48,0,root);legs.push(l);box(.19,.12,.34,M.black,side*.18,.08,.08,root)}
+ root.scale.setScalar(id===1?.94:id===2?1.04:1);chars.push({name,id,root,head,arms,legs,x,z});}
+makeCharacter('Zio',0,-1.9,2.9,0x414c5c,0x201b1b);
+makeCharacter('Erla',1,-.6,3.2,0x6b514b,0x29232a);
+makeCharacter('Olaf',2,.75,3.15,0x4a5360,0x242027);
+makeCharacter('Den',3,2.1,2.9,0x252832,0x17191e);
+// A distant shadow, only revealed in the planned beats
+const ghost=new THREE.Group();scene.add(ghost);const ghostMat=mat(0x0a0d12,.98);const robe=add(new THREE.ConeGeometry(.62,2.55,9),ghostMat,0,-.55,0,ghost);robe.rotation.x=Math.PI;ball(.27,ghostMat,0,.8,0,.8,1.15,.75,ghost);ghost.position.set(4,4.6,-13.3);ghost.visible=false;
+const flashlight=box(.14,.14,.56,M.steel,-1.5,1.2,3.1);flashlight.visible=false;const target=new THREE.Object3D();target.position.set(0,2,-13);scene.add(target);const beam=new THREE.SpotLight(0xdce8ff,0,32,.34,.72,1.1);beam.position.set(-1.5,1.2,3.1);beam.target=target;scene.add(beam);
 const shots=[
-[0,4,'EMPAT ORANG','RUMAH YANG MEMANGGIL','title','establish'],
-[4,9,'Malam itu, jalan desa sudah sepi.','Hanya suara jangkrik menemani.','village','crane'],
-[9,13,'Mereka berempat berjalan pulang.','','walk','tracking'],
-[13,17,'Tio berhenti.','“Eh. Kalian dengar?”','tio','close'],
-[17,21,'Bila menoleh ke arah rumah.','“Dengar apa?”','bila','close'],
-[21,25,'Sebuah suara terdengar dari balik pagar.','“Ardan...”','gate','pov'],
-[25,29,'Ardan menatap rumah itu.','“Itu suara siapa?”','ardan','push'],
-[29,33,'Yhola melihat jendela lantai dua.','Tirai itu bergerak sendiri.','yhola','close'],
-[33,37,'Di balik kaca... ada seseorang.','','window','tele'],
-[37,41,'Sosok itu menghilang.','Secepat kedipan mata.','emptywindow','snap'],
-[41,45,'“Jangan dijawab, Dan.”','Bila mencengkeram lengannya.','bilaardan','two'],
-[45,49,'Tiba-tiba lampu rumah menyala.','','light','wide'],
-[49,53,'Pintu depan terbuka perlahan.','Kreeeek...','door','push'],
-[53,57,'Mereka mundur beberapa langkah.','','groupfear','handheld'],
-[57,61,'Terdengar langkah dari lantai atas.','Duk... duk... duk...','stairs','tilt'],
-[61,65,'Tio mengangkat senter.','“Ada orang di dalam?”','flashlight','follow'],
-[65,69,'Sorot lampu menangkap bayangan.','','ghost','whip'],
-[69,73,'Bayangan itu berdiri di ujung lorong.','','hall','push'],
-[73,77,'Ardan mundur. Pagar berderit di belakangnya.','','ardanrun','tracking'],
-[77,81,'Pintu rumah membanting keras!','','slam','shake'],
-[81,86,'Gelap. Hanya suara napas mereka.','','black','hold'],
-[86,92,'“Akhirnya... kalian pulang.”','BERSAMBUNG','end','slowpush']
+[0,4,'Di ujung desa...','village'],
+[4,9,'Ada sebuah rumah yang sudah lama ditinggalkan.','house'],
+[9,14,'Warga bilang... sejak bertahun-tahun lalu, tak seorang pun berani melewati pagarnya setelah matahari tenggelam.','warning'],
+[14,18,'Malam itu... Zio, Erla, Olaf, dan Den pulang bersama.','walk'],
+[18,22,'Eh... kalian dengar sesuatu?','zio'],
+[22,25,'Dari balik pagar... terdengar sebuah suara.','gate'],
+[25,27,'Den...','call'],
+[27,32,'Tirai itu bergerak. Sesosok bayangan berdiri di balik kaca.','window'],
+[32,34,'Lalu... lenyap.','empty'],
+[34,37,'Jangan dijawab, Den.','erla'],
+[37,41,'Pintu depannya... terbuka perlahan.','door'],
+[41,47,'Dari lantai atas... terdengar langkah berat menuruni tangga. Duk... Duk... Duk...','stairs'],
+[47,51,'Zio mengangkat senternya. Cahaya itu menyapu lorong...','flash'],
+[51,54,'Akhirnya...','reveal'],
+[54,60,'Kalian... pulang.','ending']
 ];
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),ease=v=>{v=clamp(v,0,1);return v*v*(3-2*v)},mix=(a,b,t)=>a+(b-a)*t;
-function cameraAt(pos,target,fov=42){camera.position.set(...pos);camera.fov=fov;camera.updateProjectionMatrix();camera.lookAt(...target)}
-function updateCharacters(t,kind,local){
- chars.forEach((c,i)=>{const walk=['walk','groupfear','ardanrun'].includes(kind);const ph=t*7+i*1.5;c.root.position.y=walk?Math.abs(Math.sin(ph))*.045:0;c.legs.forEach((l,j)=>{l.rotation.x=walk?Math.sin(ph+j*Math.PI)*.48:0});c.arms.forEach((a,j)=>{a.rotation.x=walk?Math.sin(ph+j*Math.PI+Math.PI)*.42:0});c.head.rotation.y=(kind==='tio'||kind==='bila'||kind==='yhola'||kind==='ardan')?Math.sin(local*3)*.12:0});
- if(kind==='walk'||kind==='groupfear'){chars.forEach((c,i)=>{c.root.position.x=c.baseX+Math.sin(t*.6)*.22;c.root.position.z=c.baseZ+local*1.5})}
- if(kind==='ardanrun'){const a=chars[3];a.root.position.z=3+local*4}
-}
-function renderFrame(seconds){
- const s=shots.find(z=>seconds>=z[0]&&seconds<z[1])||shots.at(-1),idx=shots.indexOf(s),local=(seconds-s[0])/(s[1]-s[0]),kind=s[4],t=seconds;
- cap.innerHTML=s[2]==='EMPAT ORANG'?'<span style="letter-spacing:.18em">EMPAT ORANG</span><br><small style="font-size:.58em;letter-spacing:.1em">RUMAH YANG MEMANGGIL</small>':(s[2]?s[2]+'<br>':'')+(s[3]?'<small style="font-size:.7em;opacity:.82">'+s[3]+'</small>':'');
- clock.textContent=new Date(t*1000).toISOString().slice(14,19)+' / 01:32';
- updateCharacters(t,kind,local);windowLights.forEach(l=>l.intensity=(kind==='light'||kind==='door'||kind==='end')?18:0);porch.intensity=(kind==='light'||kind==='door'||kind==='end')?22:0;
- ghost.visible=['window','ghost','hall','end'].includes(kind);ghost.position.y=4.4+(kind==='ghost'?Math.sin(t*4)*.08:0);
- chars.forEach(c=>c.root.visible=['walk','groupfear','tio','bila','ardan','yhola','bilaardan','flashlight','ardanrun','end'].includes(kind));
- const focus=[0,1,2,3];
- if(kind==='title'){cameraAt([0,6,19],[0,4,-12],39);chars.forEach(c=>c.root.visible=false)}
- else if(kind==='village'||kind==='establish'){cameraAt([12,8,15],[0,3,-8],40)}
- else if(kind==='walk'||kind==='groupfear'){cameraAt([0,4,13],[0,1.8,-2],43)}
- else if(kind==='tio'){cameraAt([-1.8,3.2,7],[-1.8,2,-5],34)}
- else if(kind==='bila'){cameraAt([-.55,3.1,7],[-.55,1.9,-5],34)}
- else if(kind==='yhola'){cameraAt([.75,3.3,7],[.75,2,-5],34)}
- else if(kind==='ardan'){cameraAt([2.1,3.2,7],[2.1,2,-5],34)}
- else if(kind==='gate'){cameraAt([7,2.4,8],[0,2,-13],38)}
- else if(kind==='window'||kind==='emptywindow'){cameraAt([3.8,5.4,-7],[3.8,4.5,-14],25)}
- else if(kind==='bilaardan'){cameraAt([1.2,3.5,8],[.5,1.8,2],39)}
- else if(kind==='light'){cameraAt([0,5,8],[0,4,-15],39)}
- else if(kind==='door'){cameraAt([0,2.8,-8],[0,2,-15],33);scene.getObjectByName('frontDoor')?.rotation.set(0,-ease(local)*.85,0)}
- else if(kind==='stairs'||kind==='hall'){cameraAt([0,4,-10],[0,4,-17],37)}
- else if(kind==='flashlight'){cameraAt([-2,3.2,7],[0,2,-13],36)}
- else if(kind==='ghost'){cameraAt([4,5.2,-8],[3.8,4.5,-14],24)}
- else if(kind==='ardanrun'){cameraAt([4,3.5,12],[2,1.5,2],40)}
- else if(kind==='slam'){cameraAt([0,3,-8],[0,2,-15],35);camera.position.x+=(Math.random()-.5)*.18}
- else if(kind==='black'){scene.background.set(0x020306);cameraAt([0,2,8],[0,1,-10],45)}
- else {cameraAt([0,4,10],[0,2,-13],39)}
- if(kind!=='black')scene.background.set(0x090f19);
- // camera language: push-ins, lateral tracking, crane and handheld movement
- if(['push','slowpush','tele','pov'].includes(s[5]))camera.position.lerp(new THREE.Vector3(camera.position.x,camera.position.y,camera.position.z-(s[5]==='tele'?2.2:1.1)*ease(local)),.7);
- if(s[5]==='crane')camera.position.y+=mix(1,-.5,ease(local));
- if(s[5]==='tracking')camera.position.x+=Math.sin(local*Math.PI)*.8;
- if(s[5]==='handheld'||s[5]==='shake'){camera.position.x+=(Math.random()-.5)*.09;camera.position.y+=(Math.random()-.5)*.07}
- renderer.render(scene,camera);
-}
-window.renderFrame=renderFrame;window.setRenderResolution=(w,h)=>{renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()};
-let start=0,paused=0,raf=0;
-function frame(now){if(!start)start=now-paused*1000;const t=Math.min(D,(now-start)/1000);renderFrame(t);if(t>=D){paused=D;play.textContent='▶ Putar lagi';raf=0;return}raf=requestAnimationFrame(frame)}
-play.onclick=()=>{if(paused>=D){paused=0;start=0}if(raf){cancelAnimationFrame(raf);raf=0;paused=Math.max(0,(performance.now()-start)/1000);play.textContent='▶ Lanjut'}else{play.textContent='Ⅱ Jeda';raf=requestAnimationFrame(frame)}};
-document.querySelector('#restart').onclick=()=>{if(raf)cancelAnimationFrame(raf);raf=0;start=0;paused=0;play.textContent='Ⅱ Jeda';raf=requestAnimationFrame(frame)};
-renderFrame(0);
-</script></body></html>
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),ease=v=>{v=clamp(v,0,1);return v*v*(3-2*v)};
+function cameraAt(p,t,f=40){camera.position.set(...p);camera.fov=f;camera.updateProjectionMatrix();camera.lookAt(...t)}
+function renderDesignTime(t){const s=shots.find(q=>t>=q[0]&&t<q[1])||shots.at(-1),local=clamp((t-s[0])/(s[1]-s[0]),0,1),kind=s[3];caption.textContent=s[2];
+ const groupVisible=['walk','zio','erla','ending','flash'].includes(kind);chars.forEach((c,i)=>{c.root.visible=groupVisible;const moving=kind==='walk'||kind==='ending';const phase=t*4+i*.9;c.root.position.set(c.x+(moving?Math.sin(t*.6+i*.3)*.15:0),moving?Math.abs(Math.sin(phase))*.04:0,c.z+(kind==='walk'?local*.7:0));c.legs.forEach((l,j)=>l.rotation.x=moving?Math.sin(phase+j*Math.PI)*.4:0);c.arms.forEach((a,j)=>a.rotation.x=moving?Math.sin(phase+j*Math.PI+Math.PI)*.3:0);c.head.rotation.y=0});
+ if(kind==='zio'){chars[0].root.visible=true;chars[0].head.rotation.y=.18;chars.slice(1).forEach(c=>c.root.visible=true)}
+ if(kind==='erla'){chars.forEach(c=>c.root.visible=true);chars[1].head.rotation.y=-.22;chars[1].arms[1].rotation.x=-.7}
+ if(kind==='ending'){chars.forEach(c=>c.root.visible=true);chars.forEach(c=>c.root.position.z+=local*.25)}
+ curtains.forEach((c,i)=>{const sway=kind==='window'?Math.sin(t*12+i)*.24:0;c.o.position.x=c.base+sway;c.o.rotation.z=sway*.16});
+ ghost.visible=kind==='window'||kind==='reveal'||kind==='ending';ghost.position.set(kind==='reveal'||kind==='ending'?1.5:4,4.6,-(kind==='reveal'?10.8:13.3));ghost.scale.setScalar(kind==='window'?.7:kind==='ending'?1.02:.88);
+ flashlight.visible=kind==='flash'||kind==='reveal';beam.intensity=kind==='flash'?62:kind==='reveal'?78:0;beamTargetPosition();
+ function beamTargetPosition(){target.position.set(Math.sin(t*1.8)*1.8,2,-13)}
+ fill.intensity=['door','stairs','reveal','ending'].includes(kind)?13:0;windows.forEach(l=>l.intensity=kind==='window'?2:0);
+ doorPivot.rotation.y=kind==='door'?-ease(local)*1.15:0;
+ if(kind==='village')cameraAt([13,9,17],[0,3,-9],39);
+ else if(kind==='house'||kind==='warning'||kind==='gate'||kind==='call')cameraAt([7,3,8],[0,3,-14],37);
+ else if(kind==='walk')cameraAt([0,4,13],[0,1.8,-2],43);
+ else if(kind==='zio')cameraAt([-1.9,3.2,7],[-1.9,2,-5],33);
+ else if(kind==='erla')cameraAt([-.6,3.2,7],[-.6,2,-5],33);
+ else if(kind==='window'||kind==='empty')cameraAt([4,5.5,-7],[4,4.5,-14],24);
+ else if(kind==='door')cameraAt([0,4,7],[0,3,-14],35);
+ else if(kind==='stairs')cameraAt([0,2.2,-8],[0,7,-15],34);
+ else if(kind==='flash')cameraAt([-1.5,2.8,6],[-.2,2,-13],35);
+ else if(kind==='reveal')cameraAt([-2,3.2,7],[1.5,2.4,-12],32);
+ else if(kind==='ending')cameraAt([0,4,10],[0,2,-13],39);
+ else cameraAt([0,4,10],[0,2,-13],39);
+ if(kind==='walk')camera.position.x+=Math.sin(local*Math.PI)*.22;
+ if(kind==='ending')camera.position.x+=Math.sin(t*3)*.035;
+ scene.background.set(kind==='empty'?0x05080d:0x08111b);renderer.render(scene,camera)}
+function audioToDesignTime(){const duration=Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:DESIGN_DURATION;return audio.currentTime/duration*DESIGN_DURATION}
+function fmt(v){v=Math.max(0,Math.floor(v));return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
+function sync(){const d=Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:DESIGN_DURATION;const t=audio.currentTime||0;seek.max=d;seek.value=t;timeLabel.textContent=fmt(t)+' / '+fmt(d);renderDesignTime(t/d*DESIGN_DURATION)}
+audio.addEventListener('loadedmetadata',sync);audio.addEventListener('timeupdate',sync);audio.addEventListener('seeked',sync);
+audio.addEventListener('ended',()=>{playBtn.textContent='▶ Putar';sync()});
+playBtn.addEventListener('click',async()=>{if(audio.paused){try{await audio.play();playBtn.textContent='Ⅱ Jeda'}catch(e){caption.textContent='Audio belum bisa dimuat. Periksa koneksi atau lokasi file MP3.'}}else{audio.pause();playBtn.textContent='▶ Putar'}});
+document.querySelector('#restart').addEventListener('click',()=>{audio.pause();audio.currentTime=0;playBtn.textContent='▶ Putar';sync()});
+seek.addEventListener('input',()=>{audio.currentTime=Number(seek.value);sync()});
+document.querySelector('#speed').addEventListener('change',e=>audio.playbackRate=Number(e.target.value));
+document.querySelector('#full').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.querySelector('#stage').requestFullscreen();else await document.exitFullscreen()}catch(e){}});
+window.addEventListener('resize',()=>renderer.setSize(900,1600,false));
+renderDesignTime(0);
+</script>
+</body></html>
