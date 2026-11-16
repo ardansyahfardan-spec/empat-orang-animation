@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "hyperframes-project"
 OUTPUT = ROOT / "output"
 FPS = 30
+RENDER_WIDTH = 540
+RENDER_HEIGHT = 960
 SEGMENTS = [(0, 23), (23, 46), (46, 69), (69, 92)]
 
 
@@ -61,6 +63,7 @@ def patch_segment(segment_project: Path, start: int, end: int) -> None:
     )
     if audio_count != 3:
         raise RuntimeError(f"Expected 3 audio tracks, found {audio_count}.")
+    index = index.replace('data-width="1080" data-height="1920"', f'data-width="{RENDER_WIDTH}" data-height="{RENDER_HEIGHT}"')
     index_path.write_text(index, encoding="utf-8")
 
     scene_path = segment_project / "compositions" / "episode.html"
@@ -70,7 +73,7 @@ def patch_segment(segment_project: Path, start: int, end: int) -> None:
         raise RuntimeError("Could not find the episode composition root.")
     scene = scene.replace(
         root_marker,
-        root_marker[:-1] + f' data-segment-offset="{start}">',
+        f'<div id="root" data-composition-id="episode" data-width="{RENDER_WIDTH}" data-height="{RENDER_HEIGHT}" data-segment-offset="{start}">',
         1
     )
     scene = scene.replace(
@@ -83,6 +86,8 @@ def patch_segment(segment_project: Path, start: int, end: int) -> None:
         'window.addEventListener("hf-seek",e=>renderAt(e.detail.time+SEGMENT_OFFSET));',
         1
     )
+    scene = scene.replace('renderer.setSize(1080,1920,false)', f'renderer.setSize({RENDER_WIDTH},{RENDER_HEIGHT},false)', 1)
+    scene = scene.replace('new THREE.PerspectiveCamera(39,1080/1920,.1,180)', f'new THREE.PerspectiveCamera(39,{RENDER_WIDTH}/{RENDER_HEIGHT},.1,180)', 1)
     scene = scene.replace('renderAt(0);', 'renderAt(SEGMENT_OFFSET);', 1)
     scene = scene.replace('onUpdate:()=>renderAt(tl.time())', 'onUpdate:()=>renderAt(tl.time()+SEGMENT_OFFSET)', 1)
     if "SEGMENT_OFFSET" not in scene or 'renderAt(e.detail.time+SEGMENT_OFFSET)' not in scene:
@@ -130,11 +135,11 @@ def main() -> None:
             audio = next((s for s in metadata.get("streams", []) if s.get("codec_type") == "audio"), None)
             if not video or not audio:
                 raise RuntimeError(f"Segment {number} is missing video or audio.")
-            if (video.get("width"), video.get("height")) != (1080, 1920):
+            if (video.get("width"), video.get("height")) != (RENDER_WIDTH, RENDER_HEIGHT):
                 raise RuntimeError(f"Segment {number} has unexpected dimensions: {video}.")
             if abs(duration - (end - start)) > 0.25:
                 raise RuntimeError(f"Segment {number} duration is {duration:.3f}s, expected {end-start}s.")
-            print(f"Verified part {number}: {duration:.3f}s, 1080x1920, {video.get('r_frame_rate')}, audio present.", flush=True)
+            print(f"Verified part {number}: {duration:.3f}s, {RENDER_WIDTH}x{RENDER_HEIGHT}, {video.get('r_frame_rate')}, audio present.", flush=True)
             part_files.append(part_file)
 
     concat_file = parts_dir / "concat.txt"
@@ -145,7 +150,9 @@ def main() -> None:
     final_file = OUTPUT / "empat-orang-ep01.mp4"
     run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_file),
-        "-c", "copy", "-movflags", "+faststart", str(final_file)
+        "-vf", f"scale=1080:1920:flags=lanczos", "-r", str(FPS),
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+        "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(final_file)
     ], timeout=300)
 
     final_meta = probe(final_file)
