@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'hyperframes-project/EMPAT-ORANG-EP01-FINAL.html'
+      - 'hyperframes-project/assets/audio/elevenlabs/**'
       - '.github/workflows/pages.yml'
 permissions:
   contents: read
