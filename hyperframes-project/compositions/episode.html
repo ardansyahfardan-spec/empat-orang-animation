@@ -10,7 +10,7 @@
 <div id="root" data-composition-id="episode" data-width="1080" data-height="1920">
   <canvas id="world"></canvas><div id="shade"></div>
   <div id="mark">EMPAT ORANG</div>
-  <div id="caption" class="clip" data-start="0" data-duration="92"><span id="line"></span><small id="subline"></small></div>
+  <div id="caption" class="clip" data-start="0" data-duration="52.3"><span id="line"></span><small id="subline"></small></div>
 </div>
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
@@ -57,7 +57,21 @@ character(0,-1.8,2.8);character(1,-.55,3.15);character(2,.75,3.1);character(3,2.
 const ghost=new THREE.Group();scene.add(ghost);const ghostMat=mat(0x11151b,.98);const ghostRobe=add(new THREE.ConeGeometry(.62,2.45,9),ghostMat,0,-.55,0,ghost);ghostRobe.rotation.x=Math.PI;ball(.27,ghostMat,0,.78,0,.78,1.12,.72,ghost);const ghostFace=mat(0x090b10);for(const x of [-.085,.085])ball(.025,ghostFace,x,.82,.205,1,1,.5,ghost);ghost.position.set(4,4.5,-13.5);ghost.scale.setScalar(.82);
 const flashlight=box(.13,.13,.52,M.metal,-1.35,1.18,3.05);flashlight.rotation.x=-.16;const beamTarget=new THREE.Object3D();beamTarget.position.set(0,2,-13);scene.add(beamTarget);const beam=new THREE.SpotLight(0xd8e5ff,0,30,.34,.72,1.2);beam.position.set(-1.35,1.2,3.05);beam.target=beamTarget;scene.add(beam);
 const shots=[
-[0,4,"EMPAT ORANG","RUMAH YANG MEMANGGIL","hook"],[4,9,"Malam itu, jalan desa sudah sepi.","Hanya suara jangkrik menemani.","village"],[9,13,"Mereka berempat berjalan pulang.","","walk"],[13,17,"Tio berhenti.","“Eh. Kalian dengar?”","tio"],[17,21,"Bila menoleh ke arah rumah.","“Dengar apa?”","bila"],[21,25,"Sebuah suara terdengar dari balik pagar.","“Ardan...”","gate"],[25,29,"Ardan menatap rumah itu.","“Itu suara siapa?”","ardan"],[29,33,"Yhola melihat jendela lantai dua.","Tirai itu bergerak sendiri.","yhola"],[33,37,"Di balik kaca... ada seseorang.","","window"],[37,41,"Sosok itu menghilang.","Secepat kedipan mata.","empty"],[41,45,"“Jangan dijawab, Dan.”","Bila mencengkeram lengannya.","two"],[45,49,"Tiba-tiba lampu rumah menyala.","","light"],[49,53,"Pintu depan terbuka perlahan.","Kreeeek...","door"],[53,57,"Mereka mundur beberapa langkah.","","fear"],[57,61,"Terdengar langkah dari lantai atas.","Duk... duk... duk...","stairs"],[61,65,"Tio mengangkat senter.","“Ada orang di dalam?”","flash"],[65,69,"Sorot lampu menangkap bayangan.","","reveal"],[69,73,"Bayangan itu berdiri di ujung lorong.","","hall"],[73,77,"Ardan mundur.","Pagar berderit di belakangnya.","retreat"],[77,81,"Pintu rumah membanting keras!","","slam"],[81,86,"Gelap. Hanya suara napas mereka.","","dark"],[86,92,"“Akhirnya... kalian pulang.”","BERSAMBUNG","end"]];
+[0,4,"Di ujung desa... ada sebuah rumah yang sudah lama ditinggalkan.","","village"],
+[4,9,"Warga bilang... sejak bertahun-tahun lalu, tak seorang pun berani melewati pagarnya setelah matahari tenggelam.","","gate"],
+[9,13,"Malam itu... Tio, Bila, Yhola, dan Ardan pulang bersama.","","walk"],
+[13,17,"Tio memperlambat langkah.","“Eh... kalian dengar sesuatu?”","tio"],
+[17,19,"Dari balik pagar... terdengar sebuah suara.","","gate"],
+[19,21,"“Ardan...”","","gate"],
+[21,25,"Tirai itu bergerak.","Sesosok bayangan berdiri di balik kaca.","window"],
+[25,27,"Lalu... lenyap.","","empty"],
+[27,31,"“Jangan dijawab, Dan.”","","two"],
+[31,35,"Pintu depannya... terbuka perlahan.","","door"],
+[35,40,"Dari lantai atas... terdengar langkah berat menuruni tangga.","Duk...   Duk...   Duk...","stairs"],
+[40,44,"Tio mengangkat senternya.","Cahaya itu menyapu lorong...","flash"],
+[44,47,"“Akhirnya...”","","reveal"],
+[47,52.3,"“Kalian... pulang.”","","end"]
+];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),ease=v=>{v=clamp(v,0,1);return v*v*(3-2*v)};
 function cameraAt(p,t,f=40){camera.position.set(...p);camera.fov=f;camera.updateProjectionMatrix();camera.lookAt(...t)}
 function renderAt(t){
@@ -97,6 +111,6 @@ function renderAt(t){
 window.addEventListener("hf-seek",e=>renderAt(e.detail.time));
 window.__hf=window.__hf||{};window.__hf.buildReady=window.__hf.buildReady||{};window.__hf.buildReady["episode"]=Promise.resolve();
 renderAt(0);
-const tl=gsap.timeline({paused:true});tl.to({}, {duration:92,onUpdate:()=>renderAt(tl.time())});window.__timelines=window.__timelines||{};window.__timelines["episode"]=tl;
+const tl=gsap.timeline({paused:true});tl.to({}, {duration:52.3,onUpdate:()=>renderAt(tl.time())});window.__timelines=window.__timelines||{};window.__timelines["episode"]=tl;
 </script>
 </template>
