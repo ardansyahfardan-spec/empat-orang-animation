@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'hyperframes-project/**'
+      - 'scripts/**'
       - '.github/workflows/render.yml'
       - 'AGENTS.md'
       - '.agents/skills/hyperframes/**'
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install edge-tts
           npx --yes hyperframes --version
+          npx --yes hyperframes render --help
       - name: Generate Indonesian neural narration
         run: |
           mkdir -p hyperframes-project/assets output
@@ -45,12 +47,13 @@ jobs:
           ffmpeg -y -f lavfi -i "anoisesrc=color=pink:amplitude=0.025:sample_rate=48000:duration=92" -af "highpass=f=120,lowpass=f=900,volume=0.22,afade=t=in:st=0:d=3,afade=t=out:st=89:d=3" -c:a pcm_s16le hyperframes-project/assets/ambience.wav
       - name: Validate HyperFrames composition
         run: npx --yes hyperframes lint ./hyperframes-project --json
-      - name: Render MP4 with HyperFrames
-        run: npx --yes hyperframes render -o ../output/empat-orang-ep01.mp4
-        working-directory: hyperframes-project
-      - name: Verify MP4 and narration
+      - name: Render four isolated 23-second segments and assemble MP4
+        run: python scripts/render_segments.py
+      - name: Verify narration and final MP4
         run: |
           test -s output/empat-orang-ep01.mp4
+          test -s hyperframes-project/assets/narration.mp3
+          test -s hyperframes-project/assets/narration.srt
           ffprobe -v error -show_entries format=duration:stream=width,height,codec_name,r_frame_rate -of json output/empat-orang-ep01.mp4
           ffprobe -v error -show_entries format=duration -of csv=p=0 hyperframes-project/assets/narration.wav
       - name: Upload MP4 and narration QA files
