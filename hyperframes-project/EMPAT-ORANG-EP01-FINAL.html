@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EMPAT ORANG — EP01: Rumah yang Memanggil</title>
+<style>
+:root{color-scheme:dark;--cream:#d8c4a5}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#090b10;color:#f4eee5;font-family:system-ui,sans-serif}body{display:flex;flex-direction:column;align-items:center}.top{width:min(100%,760px);padding:14px 16px;display:flex;justify-content:space-between;align-items:center}.brand{font-size:12px;font-weight:800;letter-spacing:.22em;color:var(--cream)}.ep{font-size:11px;color:#aaa39a}#stage{position:relative;width:min(100vw,56.25vh,540px);aspect-ratio:9/16;overflow:hidden;background:#070c13;box-shadow:0 14px 50px #0009}canvas{width:100%;height:100%;display:block}#vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#05080c22 0%,transparent 42%,#020408bb 100%)}#caption{position:absolute;left:7%;right:7%;bottom:9%;min-height:3em;text-align:center;font:500 clamp(19px,4.2vw,30px)/1.28 Georgia,serif;text-shadow:0 3px 16px #000;pointer-events:none}#caption small{display:block;margin-top:10px;color:var(--cream);font:600 .72em/1.3 system-ui,sans-serif}#controls{width:min(100%,760px);padding:14px 16px 22px;display:grid;gap:10px}#seek{width:100%;accent-color:var(--cream)}.buttons{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}button,select{border:1px solid #4a443c;background:#171a20;color:#f5eee5;border-radius:999px;padding:10px 15px;font-weight:650}button.primary{background:var(--cream);color:#17130f;border-color:var(--cream)}#time,.note{text-align:center;color:#a9a198;font-size:11px;font-variant-numeric:tabular-nums}.note{font-size:10px;line-height:1.5}audio{display:none}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand">EMPAT ORANG</div><div class="ep">EPISODE 01 · RUMAH YANG MEMANGGIL</div></header>
+<main id="stage"><canvas id="world"></canvas><div id="vignette"></div><div id="caption"></div></main>
+<section id="controls">
+<input id="seek" type="range" min="0" max="60" step=".02" value="0" aria-label="Posisi episode">
+<div class="buttons"><button id="play" class="primary">▶ Putar</button><button id="restart">↺ Ulang</button><button id="full">⛶ Layar penuh</button><select id="speed" aria-label="Kecepatan"><option value="1">1×</option><option value=".75">0,75×</option><option value=".5">0,5×</option></select></div>
+<div id="time">00:00 / --:--</div>
+<div class="note">Audio asli ElevenLabs menjadi pengendali waktu. Visual menyesuaikan durasi audio secara otomatis. Untuk menyimpan video, gunakan perekam layar saat episode diputar.</div>
+</section>
+<audio id="audio" preload="metadata" src="assets/audio/elevenlabs/EP01-VOICE-FINAL.mp3"></audio>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const canvas=document.querySelector('#world'),audio=document.querySelector('#audio'),caption=document.querySelector('#caption'),seek=document.querySelector('#seek'),timeLabel=document.querySelector('#time'),playBtn=document.querySelector('#play');
+const DESIGN_DURATION=60;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(900,1600,false);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x08111b);scene.fog=new THREE.FogExp2(0x111a24,.026);
+const camera=new THREE.PerspectiveCamera(40,9/16,.1,180);
+scene.add(new THREE.HemisphereLight(0x9bb5d0,0x17131b,1.15));
+const moon=new THREE.DirectionalLight(0x9ab8dc,2.25);moon.position.set(-8,16,7);scene.add(moon);
+const fill=new THREE.PointLight(0xffb56d,0,26);fill.position.set(0,4,-13);scene.add(fill);
+const mat=(c,r=.82,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const M={earth:mat(0x171c1d),road:mat(0x272a2e),wall:mat(0x38343a),roof:mat(0x171b25),wood:mat(0x33272a),glass:mat(0x111d2a,.24,.2),steel:mat(0x4a5056,.52,.5),leaf:mat(0x17251d),black:mat(0x101319),skin:mat(0xb98570),cream:mat(0xd8d0c3)};
+function add(g,m,x=0,y=0,z=0,p=scene){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);p.add(o);return o}
+function box(w,h,d,m,x,y,z,p=scene){return add(new THREE.BoxGeometry(w,h,d),m,x,y,z,p)}
+function ball(r,m,x,y,z,sx=1,sy=1,sz=1,p=scene){const o=add(new THREE.SphereGeometry(r,18,14),m,x,y,z,p);o.scale.set(sx,sy,sz);return o}
+function cyl(rt,rb,h,m,x,y,z,p=scene){return add(new THREE.CylinderGeometry(rt,rb,h,12),m,x,y,z,p)}
+// Village ground, lane, trees and abandoned house
+box(76,.35,100,M.earth,0,-.25,-20);box(7,.12,76,M.road,0,-.04,5);
+for(let i=0;i<13;i++){let x=-22+i*3.7,z=-22-(i%3)*4;let trunk=cyl(.16,.24,3.5,mat(0x29231f),x,1.5,z);trunk.rotation.z=(i%2?-.08:.08);ball(2,M.leaf,x,4,z,1,1.45,1)}
+box(14,8,1.2,M.wall,0,4,-15);box(15,.5,1.8,M.roof,0,8.1,-15);const roof=add(new THREE.ConeGeometry(8.8,3.8,4),M.roof,0,9.8,-15);roof.rotation.y=Math.PI/4;roof.scale.set(1,.7,.8);
+const doorPivot=new THREE.Group();doorPivot.position.set(0,0,-14.25);scene.add(doorPivot);box(1.8,4,.2,M.wood,.9,2,0,doorPivot);ball(.07,M.steel,1.55,2,.13,1,1,1,doorPivot);
+const windows=[],curtains=[];for(const x of [-4,4]){box(2.2,2.6,.16,M.glass,x,4.6,-14.34);box(2.4,.12,.2,M.steel,x,4.6,-14.18);box(.12,2.7,.2,M.steel,x,4.6,-14.18);for(const side of [-1,1]){const c=box(.92,2.4,.08,mat(0x29232b),x+side*.56,4.6,-14.05);curtains.push({o:c,x:c.position.x,base:c.position.x})}const l=new THREE.PointLight(0xffb86b,0,9);l.position.set(x,4.6,-13.3);scene.add(l);windows.push(l)}
+// Iron fence and path
+for(let i=0;i<10;i++){let x=-14+i*3.1;cyl(.07,.07,1.5,M.steel,x,.75,-7);box(.1,.1,14,M.steel,x,.6,-.5)}
+// Four stylized character rigs; names and visual identities remain consistent
+const chars=[];
+function makeCharacter(name,id,x,z,shirtColor,hairColor){const root=new THREE.Group();scene.add(root);root.position.set(x,0,z);const shirt=mat(shirtColor),pants=mat(0x252832),hair=mat(hairColor),skin=mat(0xb98570);
+ const torso=add(new THREE.CapsuleGeometry(.34,.76,5,10),shirt,0,1.38,0,root);torso.scale.set(1,.96,.68);
+ const head=new THREE.Group();head.position.set(0,2.3,0);root.add(head);ball(.34,skin,0,0,0,.9,1.08,.86,head);
+ ball(.35,hair,0,.22,-.025,1.03,.62,.92,head);if(id===0){ball(.12,hair,-.28,.02,.08,1,1.6,1,head)}
+ for(const ex of [-.105,.105])ball(.025,M.black,ex,-.02,.285,1,1,.5,head);
+ const arms=[],legs=[];for(const side of [-1,1]){const a=add(new THREE.CapsuleGeometry(.105,.62,4,8),shirt,side*.43,1.48,0,root);a.rotation.z=side*.16;arms.push(a);ball(.105,skin,side*.45,1,.02,1,1,1,root);const l=add(new THREE.CapsuleGeometry(.14,.67,4,8),pants,side*.18,.48,0,root);legs.push(l);box(.19,.12,.34,M.black,side*.18,.08,.08,root)}
+ root.scale.setScalar(id===1?.94:id===2?1.04:1);chars.push({name,id,root,head,arms,legs,x,z});}
+makeCharacter('Zio',0,-1.9,2.9,0x414c5c,0x201b1b);
+makeCharacter('Erla',1,-.6,3.2,0x6b514b,0x29232a);
+makeCharacter('Olaf',2,.75,3.15,0x4a5360,0x242027);
+makeCharacter('Den',3,2.1,2.9,0x252832,0x17191e);
+// A distant shadow, only revealed in the planned beats
+const ghost=new THREE.Group();scene.add(ghost);const ghostMat=mat(0x0a0d12,.98);const robe=add(new THREE.ConeGeometry(.62,2.55,9),ghostMat,0,-.55,0,ghost);robe.rotation.x=Math.PI;ball(.27,ghostMat,0,.8,0,.8,1.15,.75,ghost);ghost.position.set(4,4.6,-13.3);ghost.visible=false;
+const flashlight=box(.14,.14,.56,M.steel,-1.5,1.2,3.1);flashlight.visible=false;const target=new THREE.Object3D();target.position.set(0,2,-13);scene.add(target);const beam=new THREE.SpotLight(0xdce8ff,0,32,.34,.72,1.1);beam.position.set(-1.5,1.2,3.1);beam.target=target;scene.add(beam);
+const shots=[
+[0,4,'Di ujung desa...','village'],
+[4,9,'Ada sebuah rumah yang sudah lama ditinggalkan.','house'],
+[9,14,'Warga bilang... sejak bertahun-tahun lalu, tak seorang pun berani melewati pagarnya setelah matahari tenggelam.','warning'],
+[14,18,'Malam itu... Zio, Erla, Olaf, dan Den pulang bersama.','walk'],
+[18,22,'Eh... kalian dengar sesuatu?','zio'],
+[22,25,'Dari balik pagar... terdengar sebuah suara.','gate'],
+[25,27,'Den...','call'],
+[27,32,'Tirai itu bergerak. Sesosok bayangan berdiri di balik kaca.','window'],
+[32,34,'Lalu... lenyap.','empty'],
+[34,37,'Jangan dijawab, Den.','erla'],
+[37,41,'Pintu depannya... terbuka perlahan.','door'],
+[41,47,'Dari lantai atas... terdengar langkah berat menuruni tangga. Duk... Duk... Duk...','stairs'],
+[47,51,'Zio mengangkat senternya. Cahaya itu menyapu lorong...','flash'],
+[51,54,'Akhirnya...','reveal'],
+[54,60,'Kalian... pulang.','ending']
+];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),ease=v=>{v=clamp(v,0,1);return v*v*(3-2*v)};
+function cameraAt(p,t,f=40){camera.position.set(...p);camera.fov=f;camera.updateProjectionMatrix();camera.lookAt(...t)}
+function renderDesignTime(t){const s=shots.find(q=>t>=q[0]&&t<q[1])||shots.at(-1),local=clamp((t-s[0])/(s[1]-s[0]),0,1),kind=s[3];caption.textContent=s[2];
+ const groupVisible=['walk','zio','erla','ending','flash'].includes(kind);chars.forEach((c,i)=>{c.root.visible=groupVisible;const moving=kind==='walk'||kind==='ending';const phase=t*4+i*.9;c.root.position.set(c.x+(moving?Math.sin(t*.6+i*.3)*.15:0),moving?Math.abs(Math.sin(phase))*.04:0,c.z+(kind==='walk'?local*.7:0));c.legs.forEach((l,j)=>l.rotation.x=moving?Math.sin(phase+j*Math.PI)*.4:0);c.arms.forEach((a,j)=>a.rotation.x=moving?Math.sin(phase+j*Math.PI+Math.PI)*.3:0);c.head.rotation.y=0});
+ if(kind==='zio'){chars[0].root.visible=true;chars[0].head.rotation.y=.18;chars.slice(1).forEach(c=>c.root.visible=true)}
+ if(kind==='erla'){chars.forEach(c=>c.root.visible=true);chars[1].head.rotation.y=-.22;chars[1].arms[1].rotation.x=-.7}
+ if(kind==='ending'){chars.forEach(c=>c.root.visible=true);chars.forEach(c=>c.root.position.z+=local*.25)}
+ curtains.forEach((c,i)=>{const sway=kind==='window'?Math.sin(t*12+i)*.24:0;c.o.position.x=c.base+sway;c.o.rotation.z=sway*.16});
+ ghost.visible=kind==='window'||kind==='reveal'||kind==='ending';ghost.position.set(kind==='reveal'||kind==='ending'?1.5:4,4.6,-(kind==='reveal'?10.8:13.3));ghost.scale.setScalar(kind==='window'?.7:kind==='ending'?1.02:.88);
+ flashlight.visible=kind==='flash'||kind==='reveal';beam.intensity=kind==='flash'?62:kind==='reveal'?78:0;beamTargetPosition();
+ function beamTargetPosition(){target.position.set(Math.sin(t*1.8)*1.8,2,-13)}
+ fill.intensity=['door','stairs','reveal','ending'].includes(kind)?13:0;windows.forEach(l=>l.intensity=kind==='window'?2:0);
+ doorPivot.rotation.y=kind==='door'?-ease(local)*1.15:0;
+ if(kind==='village')cameraAt([13,9,17],[0,3,-9],39);
+ else if(kind==='house'||kind==='warning'||kind==='gate'||kind==='call')cameraAt([7,3,8],[0,3,-14],37);
+ else if(kind==='walk')cameraAt([0,4,13],[0,1.8,-2],43);
+ else if(kind==='zio')cameraAt([-1.9,3.2,7],[-1.9,2,-5],33);
+ else if(kind==='erla')cameraAt([-.6,3.2,7],[-.6,2,-5],33);
+ else if(kind==='window'||kind==='empty')cameraAt([4,5.5,-7],[4,4.5,-14],24);
+ else if(kind==='door')cameraAt([0,4,7],[0,3,-14],35);
+ else if(kind==='stairs')cameraAt([0,2.2,-8],[0,7,-15],34);
+ else if(kind==='flash')cameraAt([-1.5,2.8,6],[-.2,2,-13],35);
+ else if(kind==='reveal')cameraAt([-2,3.2,7],[1.5,2.4,-12],32);
+ else if(kind==='ending')cameraAt([0,4,10],[0,2,-13],39);
+ else cameraAt([0,4,10],[0,2,-13],39);
+ if(kind==='walk')camera.position.x+=Math.sin(local*Math.PI)*.22;
+ if(kind==='ending')camera.position.x+=Math.sin(t*3)*.035;
+ scene.background.set(kind==='empty'?0x05080d:0x08111b);renderer.render(scene,camera)}
+function audioToDesignTime(){const duration=Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:DESIGN_DURATION;return audio.currentTime/duration*DESIGN_DURATION}
+function fmt(v){v=Math.max(0,Math.floor(v));return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
+function sync(){const d=Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:DESIGN_DURATION;const t=audio.currentTime||0;seek.max=d;seek.value=t;timeLabel.textContent=fmt(t)+' / '+fmt(d);renderDesignTime(t/d*DESIGN_DURATION)}
+audio.addEventListener('loadedmetadata',sync);audio.addEventListener('timeupdate',sync);audio.addEventListener('seeked',sync);
+audio.addEventListener('ended',()=>{playBtn.textContent='▶ Putar';sync()});
+playBtn.addEventListener('click',async()=>{if(audio.paused){try{await audio.play();playBtn.textContent='Ⅱ Jeda'}catch(e){caption.textContent='Audio belum bisa dimuat. Periksa koneksi atau lokasi file MP3.'}}else{audio.pause();playBtn.textContent='▶ Putar'}});
+document.querySelector('#restart').addEventListener('click',()=>{audio.pause();audio.currentTime=0;playBtn.textContent='▶ Putar';sync()});
+seek.addEventListener('input',()=>{audio.currentTime=Number(seek.value);sync()});
+document.querySelector('#speed').addEventListener('change',e=>audio.playbackRate=Number(e.target.value));
+document.querySelector('#full').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.querySelector('#stage').requestFullscreen();else await document.exitFullscreen()}catch(e){}});
+window.addEventListener('resize',()=>renderer.setSize(900,1600,false));
+renderDesignTime(0);
+</script>
+</body></html>
