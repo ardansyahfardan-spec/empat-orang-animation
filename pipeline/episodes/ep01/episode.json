@@ -1,0 +1,43 @@
+{
+  "title": "EMPAT ORANG — Episode 01: Rumah yang Memanggil",
+  "duration": 52.3,
+  "audio": "../../assets/audio/elevenlabs/narration-elevenlabs.mp3",
+  "characters": [
+    { "id": "zio", "model": "../../assets/characters/zio.glb", "position": [-1.8, 0, 2.8] },
+    { "id": "erla", "model": "../../assets/characters/erla.glb", "position": [-0.55, 0, 3.15] },
+    { "id": "olaf", "model": "../../assets/characters/olaf.glb", "position": [0.75, 0, 3.1] },
+    { "id": "den", "model": "../../assets/characters/den.glb", "position": [2.1, 0, 2.85] }
+  ],
+  "scenes": [
+    {
+      "start": 0, "end": 9,
+      "caption": "Di ujung desa... ada sebuah rumah yang sudah lama ditinggalkan.",
+      "camera": { "position": [13, 9, 17], "lookAt": [0, 3, -9], "fov": 39 },
+      "actors": []
+    },
+    {
+      "start": 9, "end": 13,
+      "caption": "Malam itu... Zio, Erla, Olaf, dan Den pulang bersama.",
+      "camera": { "position": [0, 4, 13], "lookAt": [0, 1.8, -2], "fov": 43 },
+      "actors": [
+        { "id": "zio", "action": "walk" },
+        { "id": "erla", "action": "walk" },
+        { "id": "olaf", "action": "walk" },
+        { "id": "den", "action": "walk" }
+      ]
+    },
+    {
+      "start": 13, "end": 17,
+      "caption": "Zio memperlambat langkah.",
+      "dialogue": "“Eh... kalian dengar sesuatu?”",
+      "camera": { "position": [-1.8, 3.2, 7], "lookAt": [-1.8, 2, -5], "fov": 33 },
+      "actors": [{ "id": "zio", "action": "look_back" }]
+    },
+    {
+      "start": 17, "end": 52.3,
+      "caption": "Adegan lanjutan EP01 menunggu pemetaan timestamp audio yang akurat.",
+      "camera": { "position": [4, 5.5, -7], "lookAt": [4, 4.5, -14], "fov": 24 },
+      "actors": []
+    }
+  ]
+}
