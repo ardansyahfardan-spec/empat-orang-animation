@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EMPAT ORANG — 3D Pipeline Preview</title>
+<link rel="stylesheet" href="./player.css">
+</head>
+<body>
+<header><strong>EMPAT ORANG</strong><span id="episodeTitle">3D PIPELINE PREVIEW</span></header>
+<main><section id="viewport"><canvas id="world"></canvas><div id="status">Memuat engine…</div><div id="caption"><span id="line"></span><small id="subline"></small></div></section>
+<section id="controls"><div class="row"><button id="play">Putar</button><button id="restart">Ulangi</button><label>Kecepatan <select id="speed"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option></select></label><span id="clock">00:00 / 00:00</span></div><input id="timeline" type="range" min="0" max="1" step="0.01" value="0"><p>Preview pipeline GLB. Jika aset karakter belum tersedia, engine menampilkan placeholder agar kamera, timeline, dan sinkronisasi audio tetap bisa diuji.</p></section></main>
+<audio id="narration" preload="metadata"></audio>
+<script type="module" src="./engine/main.js"></script>
+</body></html>
