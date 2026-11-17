@@ -10,7 +10,7 @@ STORY = ROOT / "produksi" / "storyboard"
 AUDIO = ROOT / "produksi" / "voice-over" / "Eps 05.mp3"
 OUT_DIR = ROOT / "output"
 OUT = OUT_DIR / "EMPAT-ORANG-EPS05-RUANGAN-DI-BALIK-LEMARI.mp4"
-FILES = [STORY / f"IMG_{n}.jpeg" for n in range(range_start := 2889, 2898)]
+FILES = [STORY / f"IMG_{n}.jpeg" for n in range(2889, 2898)]
 W, H, FPS = 1080, 1920, 30
 TRANSITION = 0.35
 
