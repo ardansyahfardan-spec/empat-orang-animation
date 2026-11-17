@@ -1,0 +1,36 @@
+name: Render EMPAT ORANG — Episode 05
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'episode-05/**'
+      - 'produksi/storyboard/**'
+      - 'produksi/voice-over/**'
+      - '.github/workflows/render-episode-05.yml'
+permissions:
+  contents: read
+concurrency:
+  group: empat-orang-episode-05-render
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout Episode 05 source
+        uses: actions/checkout@v4
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+          ffprobe -version
+      - name: Render portrait motion-comic
+        run: python3 episode-05/render.py
+      - name: Upload Episode 05 MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: EMPAT-ORANG-EPS05-RUANGAN-DI-BALIK-LEMARI
+          path: output/EMPAT-ORANG-EPS05-RUANGAN-DI-BALIK-LEMARI.mp4
+          if-no-files-found: error
+          retention-days: 30
